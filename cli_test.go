@@ -70,6 +70,40 @@ func newDriver(args []string) (*cli.Driver, *bytes.Buffer) {
 
 var _ = Describe("CLI", func() {
 
+	It("executes a non-root command", func() {
+
+		d, stdout := newDriver([]string{"foo"})
+
+		cmd := &testCmd{
+			commandName: "foo",
+		}
+		d.RegisterRoot(&testCmd{
+			subCommands: []cli.Command{cmd},
+		})
+
+		d.ParseInput()
+
+		fmt.Fprintln(GinkgoWriter, stdout.String())
+		Expect(cmd.executeCalled).To(BeTrue())
+	})
+
+	It("passes remaining args to Execute", func() {
+
+		d, _ := newDriver([]string{"foo", "arg1", "arg2"})
+
+		cmd := &testCmd{
+			commandName: "foo",
+		}
+		d.RegisterRoot(&testCmd{
+			subCommands: []cli.Command{cmd},
+		})
+
+		d.ParseInput()
+
+		Expect(cmd.executeCalled).To(BeTrue())
+		Expect(cmd.executeArgs).To(Equal([]string{"arg1", "arg2"}))
+	})
+
 	Context("formatting", func() {
 
 		It("trims newlines out of ShortHelp()", func() {
@@ -127,39 +161,5 @@ Commands:
 `
 			Expect(stdout.String()).To(Equal(expected))
 		})
-	})
-
-	It("executes a non-root command", func() {
-
-		d, stdout := newDriver([]string{"foo"})
-
-		cmd := &testCmd{
-			commandName: "foo",
-		}
-		d.RegisterRoot(&testCmd{
-			subCommands: []cli.Command{cmd},
-		})
-
-		d.ParseInput()
-
-		fmt.Fprintln(GinkgoWriter, stdout.String())
-		Expect(cmd.executeCalled).To(BeTrue())
-	})
-
-	It("passes remaining args to Execute", func() {
-
-		d, _ := newDriver([]string{"foo", "arg1", "arg2"})
-
-		cmd := &testCmd{
-			commandName: "foo",
-		}
-		d.RegisterRoot(&testCmd{
-			subCommands: []cli.Command{cmd},
-		})
-
-		d.ParseInput()
-
-		Expect(cmd.executeCalled).To(BeTrue())
-		Expect(cmd.executeArgs).To(Equal([]string{"arg1", "arg2"}))
 	})
 })
