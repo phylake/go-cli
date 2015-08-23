@@ -3,3 +3,5 @@
 # go-cli
 
 A minimalist framework for CLIs containing nested commands.
+
+[See the example](example/main.go)
