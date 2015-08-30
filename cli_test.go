@@ -71,37 +71,87 @@ func newDriver(args []string) (*cli.Driver, *bytes.Buffer) {
 var _ = Describe("CLI", func() {
 
 	It("executes a non-root command", func() {
+		var err error
 
 		d, stdout := newDriver([]string{"foo"})
 
 		cmd := &testCmd{
 			commandName: "foo",
 		}
-		d.RegisterRoot(&testCmd{
+		err = d.RegisterRoot(&testCmd{
 			subCommands: []cli.Command{cmd},
 		})
+		Expect(err).To(BeNil())
 
-		d.ParseInput()
+		err = d.ParseInput()
+		Expect(err).To(BeNil())
 
 		fmt.Fprintln(GinkgoWriter, stdout.String())
 		Expect(cmd.executeCalled).To(BeTrue())
 	})
 
 	It("passes remaining args to Execute", func() {
+		var err error
 
 		d, _ := newDriver([]string{"foo", "arg1", "arg2"})
 
 		cmd := &testCmd{
 			commandName: "foo",
 		}
-		d.RegisterRoot(&testCmd{
+		err = d.RegisterRoot(&testCmd{
 			subCommands: []cli.Command{cmd},
 		})
+		Expect(err).To(BeNil())
 
-		d.ParseInput()
+		err = d.ParseInput()
+		Expect(err).To(BeNil())
 
 		Expect(cmd.executeCalled).To(BeTrue())
 		Expect(cmd.executeArgs).To(Equal([]string{"arg1", "arg2"}))
+	})
+
+	It("scopes name collision to subcommands", func() {
+		var err error
+
+		goodTree := &testCmd{
+			subCommands: []cli.Command{
+				&testCmd{
+					commandName: "foo",
+					subCommands: []cli.Command{
+						&testCmd{
+							commandName: "bar",
+						},
+					},
+				},
+				&testCmd{
+					commandName: "bar",
+				},
+			},
+		}
+
+		badTree := &testCmd{
+			subCommands: []cli.Command{
+				&testCmd{
+					commandName: "foo",
+				},
+				&testCmd{
+					commandName: "foo",
+				},
+			},
+		}
+
+		d, _ := newDriver(nil)
+
+		err = d.RegisterRoot(goodTree)
+		Expect(err).To(BeNil())
+
+		err = d.ParseInput()
+		Expect(err).To(BeNil())
+
+		d, _ = newDriver(nil)
+
+		err = d.RegisterRoot(badTree)
+		Expect(err).ToNot(BeNil())
 	})
 
 	Context("formatting", func() {

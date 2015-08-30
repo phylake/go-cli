@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/armon/go-radix"
 	"io"
 	"math"
 	"os"
@@ -45,9 +46,12 @@ type (
 		stdout io.Writer
 
 		/* command-related fields */
-		root              Command
-		registry          map[string]Command
-		longestSubCommand map[string]float64
+		tree *radix.Tree
+	}
+
+	commandNode struct {
+		command           Command
+		longestSubCommand float64
 	}
 )
 
@@ -79,42 +83,63 @@ func NewWithEnv(args []string, stdin *os.File, stdout io.Writer) *Driver {
 }
 
 func (d *Driver) ParseInput() error {
-	if d.root == nil {
+	var (
+		node   commandNode
+		iface  interface{}
+		exists bool
+		ok     bool
+	)
+
+	if d.tree == nil {
 		return errors.New("root command doesn't exist. call RegisterRoot first")
 	}
 
-	cmd := d.root
+	iface, exists = d.tree.Get("")
+	if !exists {
+		return errors.New("tree exists without a root")
+	}
+
+	node, ok = iface.(commandNode)
+	if !ok {
+		return errors.New("node is not a commandNode")
+	}
+
 	i := 1 // 0 is the program name (similar to ARGV)
+	path := ""
 	for ; i < len(d.args); i++ {
 
 		// fmt.Fprintf(d.stdout, "arg %d %s\n", i, d.args[i])
-		if subCmd, exists := d.registry[d.args[i]]; exists {
-			cmd = subCmd
+		path = path + "/" + d.args[i]
+		if subCmd, exists := d.tree.Get(path); exists {
+			node, ok = subCmd.(commandNode)
+			if !ok {
+				return fmt.Errorf("node at path [%s] is not a commandNode", path)
+			}
 		} else {
 			break
 		}
 	}
 
+	cmd := node.command
 	if !cmd.Execute(d.args[i:], d.stdin) {
 
 		fmt.Fprintln(d.stdout, cmd.LongHelp())
 		fmt.Fprintln(d.stdout)
-
-		padding, _ := d.longestSubCommand[cmd.Name()]
 
 		subCmds := cmd.SubCommands()
 		if len(subCmds) > 0 {
 
 			fmt.Fprintln(d.stdout, "Commands:")
 
+			// create format string with correct padding to accommodate
+			// the longest command name.
+			//
+			// e.g. "    %-42s - %s\n" if 42 is the longest
+			fmtStr := fmt.Sprintf("    %%-%.fs - %%s\n", node.longestSubCommand)
+
 			for _, subCmd := range subCmds {
 				cmdName := subCmd.Name()
 
-				// create format string with correct padding to accommodate
-				// the longest command name.
-				//
-				// e.g. "    %-42s - %s\n" if 42 is the longest
-				fmtStr := fmt.Sprintf("    %%-%.fs - %%s\n", padding)
 				shortHelp := newlineRE.ReplaceAllString(subCmd.ShortHelp(), "")
 				fmt.Fprintf(d.stdout, fmtStr, cmdName, shortHelp)
 			}
@@ -125,53 +150,59 @@ func (d *Driver) ParseInput() error {
 }
 
 func (d *Driver) RegisterRoot(newRoot Command) error {
-	if d.root != nil {
-		return errors.New("root command already registered")
+	if d.tree != nil {
+		return errors.New("RegisterRoot already called")
+	}
+
+	if newRoot == nil {
+		return errors.New("root command is nil")
 	}
 
 	if newRoot.Name() != "" {
 		return errors.New("root command name must be \"\"")
 	}
 
-	d.registry = make(map[string]Command)
-	d.longestSubCommand = make(map[string]float64)
-	d.root = newRoot
+	d.tree = radix.New()
 
-	return d.registerCmd(d.root, nil)
+	return d.registerCmd("", newRoot, nil)
 }
 
-func (d *Driver) registerCmd(cmd Command, maxLen *float64) error {
+func (d *Driver) registerCmd(path string, cmd Command, maxLen *float64) error {
 	if cmd == nil {
 		return nil
 	}
 
 	cmdName := cmd.Name()
+	path = path + cmdName
 
 	if maxLen != nil {
 		*maxLen = math.Max(*maxLen, float64(len(cmdName)))
 	}
 
-	if _, exists := d.registry[cmdName]; exists {
-		return fmt.Errorf("command named %s already exists", cmdName)
+	if _, exists := d.tree.Get(path); exists {
+		return fmt.Errorf("command path %s already exists", path)
 	}
 
-	d.registry[cmdName] = cmd
+	longestSub := new(float64)
 
 	subCmds := cmd.SubCommands()
 	if subCmds != nil {
 
-		longestSub := new(float64)
-
 		for _, subCmd := range subCmds {
 
-			err := d.registerCmd(subCmd, longestSub)
+			err := d.registerCmd(path+"/", subCmd, longestSub)
 			if err != nil {
 				return err
 			}
 		}
-
-		d.longestSubCommand[cmdName] = *longestSub
 	}
+
+	node := commandNode{
+		command:           cmd,
+		longestSubCommand: *longestSub,
+	}
+
+	d.tree.Insert(path, node)
 
 	return nil
 }
