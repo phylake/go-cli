@@ -45,9 +45,9 @@ type (
 		stdout io.Writer
 
 		/* command-related fields */
-		root       Command
-		registry   map[string]Command
-		longestCmd float64
+		root              Command
+		registry          map[string]Command
+		longestSubCommand map[string]float64
 	}
 )
 
@@ -100,6 +100,8 @@ func (d *Driver) ParseInput() error {
 		fmt.Fprintln(d.stdout, cmd.LongHelp())
 		fmt.Fprintln(d.stdout)
 
+		padding, _ := d.longestSubCommand[cmd.Name()]
+
 		subCmds := cmd.SubCommands()
 		if len(subCmds) > 0 {
 
@@ -112,7 +114,7 @@ func (d *Driver) ParseInput() error {
 				// the longest command name.
 				//
 				// e.g. "    %-42s - %s\n" if 42 is the longest
-				fmtStr := fmt.Sprintf("    %%-%.fs - %%s\n", d.longestCmd)
+				fmtStr := fmt.Sprintf("    %%-%.fs - %%s\n", padding)
 				shortHelp := newlineRE.ReplaceAllString(subCmd.ShortHelp(), "")
 				fmt.Fprintf(d.stdout, fmtStr, cmdName, shortHelp)
 			}
@@ -132,19 +134,22 @@ func (d *Driver) RegisterRoot(newRoot Command) error {
 	}
 
 	d.registry = make(map[string]Command)
+	d.longestSubCommand = make(map[string]float64)
 	d.root = newRoot
 
-	return d.registerCmd(d.root)
-
+	return d.registerCmd(d.root, nil)
 }
 
-func (d *Driver) registerCmd(cmd Command) error {
+func (d *Driver) registerCmd(cmd Command, maxLen *float64) error {
 	if cmd == nil {
 		return nil
 	}
 
 	cmdName := cmd.Name()
-	d.longestCmd = math.Max(d.longestCmd, float64(len(cmdName)))
+
+	if maxLen != nil {
+		*maxLen = math.Max(*maxLen, float64(len(cmdName)))
+	}
 
 	if _, exists := d.registry[cmdName]; exists {
 		return fmt.Errorf("command named %s already exists", cmdName)
@@ -155,13 +160,17 @@ func (d *Driver) registerCmd(cmd Command) error {
 	subCmds := cmd.SubCommands()
 	if subCmds != nil {
 
+		longestSub := new(float64)
+
 		for _, subCmd := range subCmds {
 
-			err := d.registerCmd(subCmd)
+			err := d.registerCmd(subCmd, longestSub)
 			if err != nil {
 				return err
 			}
 		}
+
+		d.longestSubCommand[cmdName] = *longestSub
 	}
 
 	return nil

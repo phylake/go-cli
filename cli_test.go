@@ -161,5 +161,54 @@ Commands:
 `
 			Expect(stdout.String()).To(Equal(expected))
 		})
+
+		It("pads the longest command name per parent node", func() {
+
+			root := &testCmd{
+				longHelp: "program description",
+				subCommands: []cli.Command{
+					&testCmd{
+						commandName: "foo",
+						shortHelp:   "short help",
+					},
+
+					&testCmd{
+						commandName: "longerFoo",
+						shortHelp:   "short help",
+						subCommands: []cli.Command{
+							&testCmd{
+								commandName: "evenLongerCommandName",
+								shortHelp:   "evenLongerCommandName short help",
+							},
+						},
+					},
+				},
+			}
+
+			d, stdout := newDriver(nil)
+			d.RegisterRoot(root)
+			d.ParseInput()
+
+			// be careful of whitespace in this string
+			expected := `program description
+
+Commands:
+    foo       - short help
+    longerFoo - short help
+`
+			Expect(stdout.String()).To(Equal(expected))
+
+			d, stdout = newDriver([]string{"longerFoo"})
+			d.RegisterRoot(root)
+			d.ParseInput()
+
+			// be careful of whitespace in this string
+			expected = `
+
+Commands:
+    evenLongerCommandName - evenLongerCommandName short help
+`
+			Expect(stdout.String()).To(Equal(expected))
+		})
 	})
 })
