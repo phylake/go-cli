@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -53,7 +54,7 @@ func newDriver(args []string) (*cli.Driver, *bytes.Buffer) {
 	// program name is ARGV[0]
 	args = append([]string{"go-cli"}, args...)
 
-	d := cli.NewWithEnv(args, &stdout)
+	d := cli.NewWithEnv(flag.ContinueOnError, args, &stdout)
 	return d, &stdout
 }
 

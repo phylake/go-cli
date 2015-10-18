@@ -2,8 +2,8 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"flag"
+	"fmt"
 	"github.com/armon/go-radix"
 	"io"
 	"math"
@@ -38,7 +38,7 @@ type (
 		// This is exposed so commands creating flag.FlagSet can use the setting
 		// on the driver for consistency
 		ErrorHandling flag.ErrorHandling
-		
+
 		// os.Args
 		args []string
 
@@ -59,7 +59,7 @@ type (
 var newlineRE = regexp.MustCompile(`\n`)
 
 func New(errorHandling flag.ErrorHandling) *Driver {
-	return NewWithEnv(errorHandling,nil, nil)
+	return NewWithEnv(errorHandling, nil, nil)
 }
 
 // NewWithEnv inverts control of the outside world and enables testing
@@ -74,8 +74,8 @@ func NewWithEnv(errorHandling flag.ErrorHandling, args []string, stdout io.Write
 
 	return &Driver{
 		ErrorHandling: errorHandling,
-		args:   args,
-		stdout: stdout,
+		args:          args,
+		stdout:        stdout,
 	}
 }
 
@@ -144,14 +144,14 @@ func (d *Driver) ParseInput() error {
 		}
 
 		switch d.ErrorHandling {
-			case flag.ContinueOnError:
-				// nothing to do
-			case flag.ExitOnError:
-				// same as an unsuccessful flag.Parse()
-				// and http://tldp.org/LDP/abs/html/exitcodes.html
-				os.Exit(2)
-			case flag.PanicOnError:
-				panic("invalid call to command at path " + path)
+		case flag.ContinueOnError:
+			// nothing to do
+		case flag.ExitOnError:
+			// same as an unsuccessful flag.Parse()
+			// and http://tldp.org/LDP/abs/html/exitcodes.html
+			os.Exit(2)
+		case flag.PanicOnError:
+			panic("invalid call to command at path " + path)
 		}
 	}
 
