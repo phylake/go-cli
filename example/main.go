@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -8,33 +9,34 @@ import (
 	"github.com/phylake/go-cli/cmd"
 )
 
-// Run `go run main.go`, `go run main.go punch`, etc.
+// Run `go run main.go`, `go run main.go punch`, `go run main.go punch -combo Shoryuken!`, etc.
 func main() {
 	driver := cli.New()
 
 	rootCmd := &cmd.Root{
-		Help: `Usage: ninja COMMAND [args]
+		Help: `Usage: ryu COMMAND [args]
 
-A madeup CLI to demonstrate this framework`,
+A madeup CLI to demonstrate this framework.
+
+Ryu is a character from Street Fighter II`,
 		SubCommandList: []cli.Command{
+
+			&PunchCmd{},
+
+			// A simple command so you don't have to implement all the methods
+			// of cli.Command
 			&cmd.Default{
-				NameStr:      "punch",
-				ShortHelpStr: "punch your shell",
-				LongHelpStr: `Punch your shell with the power of 1000 hurricanes.
-
-Usage: punch [OPTIONS]
-
-Options:
-  --execute`,
+				NameStr:      "version",
+				ShortHelpStr: "Print out a version string",
 				ExecuteFunc: func(args []string, stdin *os.File) bool {
-					if len(args) == 1 && args[0] == "--execute" {
-						fmt.Println("POW!")
-						return true
-					}
-					return false
+					fmt.Println("v0.0.1")
+
+					// since this command doesn't take any arguments it doesn't
+					// need a LongHelp() since we always return a successful
+					// execution
+					return true
 				},
 			},
-			&KickCmd{},
 		},
 	}
 
@@ -47,36 +49,55 @@ Options:
 	}
 }
 
-// KickCmd implements cli.Command
-type KickCmd struct{}
+// PunchCmd implements cli.Command
+type PunchCmd struct{}
 
-func (cmd *KickCmd) Name() string {
-	return "kick"
+func (cmd *PunchCmd) Name() string {
+	return "punch"
 }
 
-func (cmd *KickCmd) ShortHelp() string {
-	return "kick your shell"
+func (cmd *PunchCmd) ShortHelp() string {
+	return "Punch your shell"
 }
 
-func (cmd *KickCmd) LongHelp() string {
-	return `kick your shell with the power of one supernova
+func (cmd *PunchCmd) LongHelp() string {
+	return `NAME
+	punch - Punch your shell
 
-Usage: kick [OPTIONS]
+SYNOPSIS
+	punch -combo <combo name>
 
-Options:
-  --execute`
+DESCRIPTION
+	punch is a fake command illustrating how to build a nested command CLI
+	including parsing arguments and printing out this help text when a command
+	is invoked incorrectly`
 }
 
 // Return false if this command wasn't correctly invoked and LongHelp() will be
 // printed out
-func (cmd *KickCmd) Execute(args []string, stdin *os.File) bool {
-	if len(args) == 1 && args[0] == "--execute" {
-		fmt.Println("BOOM!")
+func (cmd *PunchCmd) Execute(args []string, stdin *os.File) bool {
+	if len(args) > 0 {
+
+		var combo string
+
+		flagSet := flag.NewFlagSet("", flag.ExitOnError)
+		flagSet.Usage = func() {
+			fmt.Println(cmd.LongHelp())
+		}
+
+		// don't use flag description since we're setting Usage
+		flagSet.StringVar(&combo, "combo", "", "")
+
+		// Parse will succeed or os.Exit
+		flagSet.Parse(args)
+
+		fmt.Println("You executed punch combo " + combo)
+
 		return true
 	}
 	return false
 }
 
-func (cmd *KickCmd) SubCommands() []cli.Command {
+func (cmd *PunchCmd) SubCommands() []cli.Command {
 	return nil
 }
