@@ -10,7 +10,7 @@ import (
 
 // Run `go run main.go`, `go run main.go punch`, `go run main.go punch -combo Shoryuken!`, etc.
 func main() {
-	driver := cli.New()
+	driver := cli.New(flag.ContinueOnError)
 
 	rootCmd := &cmd.Root{
 		Help: `Usage: ryu COMMAND [args]
@@ -79,7 +79,7 @@ func (cmd *PunchCmd) Execute(args []string) bool {
 
 		var combo string
 
-		flagSet := flag.NewFlagSet("", flag.ExitOnError)
+		flagSet := flag.NewFlagSet("", flag.ContinueOnError)
 		flagSet.Usage = func() {
 			fmt.Println(cmd.LongHelp())
 		}

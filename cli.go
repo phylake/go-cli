@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"flag"
 	"github.com/armon/go-radix"
 	"io"
 	"math"
@@ -34,6 +35,10 @@ type (
 	}
 
 	Driver struct {
+		// This is exposed so commands creating flag.FlagSet can use the setting
+		// on the driver for consistency
+		ErrorHandling flag.ErrorHandling
+		
 		// os.Args
 		args []string
 
@@ -53,12 +58,12 @@ type (
 
 var newlineRE = regexp.MustCompile(`\n`)
 
-func New() *Driver {
-	return NewWithEnv(nil, nil)
+func New(errorHandling flag.ErrorHandling) *Driver {
+	return NewWithEnv(errorHandling,nil, nil)
 }
 
 // NewWithEnv inverts control of the outside world and enables testing
-func NewWithEnv(args []string, stdout io.Writer) *Driver {
+func NewWithEnv(errorHandling flag.ErrorHandling, args []string, stdout io.Writer) *Driver {
 	if args == nil {
 		args = os.Args
 	}
@@ -68,6 +73,7 @@ func NewWithEnv(args []string, stdout io.Writer) *Driver {
 	}
 
 	return &Driver{
+		ErrorHandling: errorHandling,
 		args:   args,
 		stdout: stdout,
 	}
@@ -135,6 +141,17 @@ func (d *Driver) ParseInput() error {
 				shortHelp := newlineRE.ReplaceAllString(subCmd.ShortHelp(), "")
 				fmt.Fprintf(d.stdout, fmtStr, cmdName, shortHelp)
 			}
+		}
+
+		switch d.ErrorHandling {
+			case flag.ContinueOnError:
+				// nothing to do
+			case flag.ExitOnError:
+				// same as an unsuccessful flag.Parse()
+				// and http://tldp.org/LDP/abs/html/exitcodes.html
+				os.Exit(2)
+			case flag.PanicOnError:
+				panic("invalid call to command at path " + path)
 		}
 	}
 
