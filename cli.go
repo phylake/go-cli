@@ -23,11 +23,11 @@ type (
 		// Its subcommands' ShortHelp message will also be printed.
 		LongHelp() string
 
-		// Execute executes with the remaining passed in arguments and os.Stdin
+		// Execute executes with the remaining passed in arguments.
 		//
 		// Return false if the command can't execute which will display the
 		// command's LongHelp message
-		Execute([]string, *os.File) bool
+		Execute([]string) bool
 
 		// Any sub commands this command is capable of
 		SubCommands() []Command
@@ -36,10 +36,6 @@ type (
 	Driver struct {
 		// os.Args
 		args []string
-
-		// stdin is passed unaltered to commands since we can't
-		// make assumptions about the minimal interface
-		stdin *os.File
 
 		// to communicate out we only need a writer so there's no need to couple
 		// simple communication with a *os.File
@@ -58,17 +54,13 @@ type (
 var newlineRE = regexp.MustCompile(`\n`)
 
 func New() *Driver {
-	return NewWithEnv(nil, nil, nil)
+	return NewWithEnv(nil, nil)
 }
 
 // NewWithEnv inverts control of the outside world and enables testing
-func NewWithEnv(args []string, stdin *os.File, stdout io.Writer) *Driver {
+func NewWithEnv(args []string, stdout io.Writer) *Driver {
 	if args == nil {
 		args = os.Args
-	}
-
-	if stdin == nil {
-		stdin = os.Stdin
 	}
 
 	if stdout == nil {
@@ -77,7 +69,6 @@ func NewWithEnv(args []string, stdin *os.File, stdout io.Writer) *Driver {
 
 	return &Driver{
 		args:   args,
-		stdin:  stdin,
 		stdout: stdout,
 	}
 }
@@ -121,7 +112,7 @@ func (d *Driver) ParseInput() error {
 	}
 
 	cmd := node.command
-	if !cmd.Execute(d.args[i:], d.stdin) {
+	if !cmd.Execute(d.args[i:]) {
 
 		fmt.Fprintln(d.stdout, cmd.LongHelp())
 

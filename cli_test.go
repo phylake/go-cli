@@ -3,8 +3,6 @@ package cli_test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,7 +23,6 @@ type testCmd struct {
 
 	executeCalled bool
 	executeArgs   []string
-	executeStdin  *os.File
 }
 
 func (c *testCmd) Name() string {
@@ -40,10 +37,9 @@ func (c *testCmd) LongHelp() string {
 	return c.longHelp
 }
 
-func (c *testCmd) Execute(args []string, stdin *os.File) bool {
+func (c *testCmd) Execute(args []string) bool {
 	c.executeCalled = true
 	c.executeArgs = args
-	c.executeStdin = stdin
 	return c.execute
 }
 
@@ -54,13 +50,10 @@ func (c *testCmd) SubCommands() []cli.Command {
 func newDriver(args []string) (*cli.Driver, *bytes.Buffer) {
 	var stdout bytes.Buffer
 
-	stdin, err := ioutil.TempFile("", "go-cli")
-	Expect(err).To(BeNil())
-
 	// program name is ARGV[0]
 	args = append([]string{"go-cli"}, args...)
 
-	d := cli.NewWithEnv(args, stdin, &stdout)
+	d := cli.NewWithEnv(args, &stdout)
 	return d, &stdout
 }
 

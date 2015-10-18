@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/phylake/go-cli"
 	"github.com/phylake/go-cli/cmd"
@@ -28,7 +27,7 @@ Ryu is a character from Street Fighter II`,
 			&cmd.Default{
 				NameStr:      "version",
 				ShortHelpStr: "Print out a version string",
-				ExecuteFunc: func(args []string, stdin *os.File) bool {
+				ExecuteFunc: func(args []string) bool {
 					fmt.Println("v0.0.1")
 
 					// since this command doesn't take any arguments it doesn't
@@ -75,7 +74,7 @@ DESCRIPTION
 
 // Return false if this command wasn't correctly invoked and LongHelp() will be
 // printed out
-func (cmd *PunchCmd) Execute(args []string, stdin *os.File) bool {
+func (cmd *PunchCmd) Execute(args []string) bool {
 	if len(args) > 0 {
 
 		var combo string

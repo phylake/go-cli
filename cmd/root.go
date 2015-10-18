@@ -1,10 +1,6 @@
 package cmd
 
-import (
-	"os"
-
-	"github.com/phylake/go-cli"
-)
+import "github.com/phylake/go-cli"
 
 // Root implements cli.Command.
 //
@@ -30,7 +26,7 @@ func (cmd *Root) LongHelp() string {
 
 // The root command isn't run because a call to the CLI with no arguments should
 // print out the Help string
-func (cmd *Root) Execute([]string, *os.File) bool {
+func (cmd *Root) Execute([]string) bool {
 	return false
 }
 

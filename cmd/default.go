@@ -1,10 +1,6 @@
 package cmd
 
-import (
-	"os"
-
-	"github.com/phylake/go-cli"
-)
+import "github.com/phylake/go-cli"
 
 // Default is the default implementation of cli.Command.
 //
@@ -13,7 +9,7 @@ type Default struct {
 	NameStr        string
 	ShortHelpStr   string
 	LongHelpStr    string
-	ExecuteFunc    func([]string, *os.File) bool
+	ExecuteFunc    func([]string) bool
 	SubCommandList []cli.Command
 }
 
@@ -29,9 +25,9 @@ func (cmd *Default) LongHelp() string {
 	return cmd.LongHelpStr
 }
 
-func (cmd *Default) Execute(args []string, stdin *os.File) bool {
+func (cmd *Default) Execute(args []string) bool {
 	if cmd.ExecuteFunc != nil {
-		return cmd.ExecuteFunc(args, stdin)
+		return cmd.ExecuteFunc(args)
 	}
 	return false
 }
