@@ -124,11 +124,12 @@ func (d *Driver) ParseInput() error {
 	if !cmd.Execute(d.args[i:], d.stdin) {
 
 		fmt.Fprintln(d.stdout, cmd.LongHelp())
-		fmt.Fprintln(d.stdout)
 
 		subCmds := cmd.SubCommands()
+
 		if len(subCmds) > 0 {
 
+			fmt.Fprintln(d.stdout)
 			fmt.Fprintln(d.stdout, "Commands:")
 
 			// create format string with correct padding to accommodate
